@@ -353,6 +353,23 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Debug endpoint — check indexer accessibility from server
+  if (url === '/debug/indexers') {
+    const { searchYTS, searchEZTV } = require('./lib/indexers');
+    Promise.allSettled([
+      searchYTS('tt0111161'),
+      searchEZTV('tt0944947', 1, 1),
+    ]).then(results => {
+      const report = {
+        yts: { status: results[0].status, count: results[0].value?.length || 0, sample: results[0].value?.[0]?.name || results[0].reason?.message },
+        eztv: { status: results[1].status, count: results[1].value?.length || 0, sample: results[1].value?.[0]?.name || results[1].reason?.message },
+      };
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(report, null, 2));
+    });
+    return;
+  }
+
   // Serve configure page (web installer)
   if (url === '/' || url === '/configure' || url === '/configure.html') {
     const htmlPath = path.join(__dirname, 'configure.html');
