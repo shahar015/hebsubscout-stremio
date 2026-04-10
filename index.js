@@ -7,11 +7,12 @@
  * Free and open source alternative to "Heb Subs Premium".
  */
 
-const { addonBuilder, serveHTTP } = require('stremio-addon-sdk');
+const { addonBuilder, getRouter } = require('stremio-addon-sdk');
 const { enrichStreams, matchSource } = require('./lib/matcher');
-const { searchAll } = require('./lib/providers');
+const { searchAll, downloadKtuvit } = require('./lib/providers');
 const { scrapeAll } = require('./lib/scrapers');
 const cache = require('./lib/cache');
+const http = require('http');
 
 // =========================================================================
 // MANIFEST
@@ -71,18 +72,21 @@ function buildStreamTitle(source) {
   }
   if (qualityStr.trim()) parts.push(qualityStr.trim());
 
-  // Hebrew subtitle match indicator
+  // Hebrew subtitle match indicator — THE KEY FEATURE
   if (source.matchPct > 0) {
     parts.push(`[עב ${source.matchPct}%]`);
   } else if (source.matchPct === 0 && source._subsChecked) {
     parts.push('[עב ✗]');
   }
 
-  // Provider
-  parts.push(source.provider);
+  // Size + seeders
+  const meta = [];
+  if (source.size) meta.push(source.size);
+  if (source.seeders > 0) meta.push(`👤 ${source.seeders}`);
+  if (meta.length > 0) parts.push(meta.join(' '));
 
-  // Size
-  if (source.size) parts.push(source.size);
+  // Tracker/indexer
+  if (source.tracker) parts.push(source.tracker);
 
   return parts.join(' | ');
 }
@@ -140,8 +144,8 @@ builder.defineStreamHandler(async ({ type, id }) => {
     // Title with match % — THE KEY FEATURE
     stream.title = buildStreamTitle(src);
 
-    // Name (shorter, shown in compact view)
-    stream.name = src.provider;
+    // Name (shown in compact view) — provider + quality
+    stream.name = `${src.provider}\n${src.quality || ''}`;
 
     // Behavior hints
     stream.behaviorHints = {};
@@ -176,35 +180,97 @@ builder.defineSubtitlesHandler(async ({ type, id, extra }) => {
   let sorted = subtitles;
 
   if (videoName) {
-    const matches = matchSource(videoName, subtitles, 0); // Get all with scores
+    const matches = matchSource(videoName, subtitles, 0);
     sorted = matches.length > 0 ? matches : subtitles;
   }
 
+  // Build the base URL for proxied downloads
+  const baseUrl = process.env.BASE_URL || `http://localhost:${port}`;
+
   // Return as Stremio subtitle objects — best match first (auto-selected by Stremio)
-  const result = sorted.map((sub, i) => ({
-    id: `hebsubscout-${sub.provider}-${sub.id}`,
-    url: sub.downloadUrl || '',
-    lang: 'heb',
-  })).filter(s => s.url); // Only include subs with download URLs
+  const result = sorted.map((sub) => {
+    let url = sub.downloadUrl || '';
+
+    // Replace proxy placeholder with actual proxy URL
+    if (url.startsWith('PROXY:ktuvit:')) {
+      const subId = url.replace('PROXY:ktuvit:', '');
+      url = `${baseUrl}/proxy/ktuvit/${subId}`;
+    }
+
+    if (!url) return null;
+
+    return {
+      id: `hebsubscout-${sub.provider}-${sub.id}`,
+      url,
+      lang: 'heb',
+    };
+  }).filter(Boolean);
 
   console.log(`[HebSubScout] Returning ${result.length} Hebrew subtitles for ${imdbId}`);
   return { subtitles: result };
 });
 
 // =========================================================================
-// SERVER
+// SERVER (custom Express app with Ktuvit download proxy)
 // =========================================================================
 
 const port = process.env.PORT || 7070;
-serveHTTP(builder.getInterface(), { port });
-console.log(`
-╔═══════════════════════════════════════════════════╗
-║   HebSubScout Stremio Addon                       ║
-║   Hebrew subtitle intelligence — free & open source║
-║                                                   ║
-║   Running on: http://localhost:${port}               ║
-║   Install:    http://localhost:${port}/manifest.json  ║
-╠═══════════════════════════════════════════════════╣
-║   Add this URL in Stremio or Nuvio to install.    ║
-╚═══════════════════════════════════════════════════╝
+
+const addonRouter = getRouter(builder.getInterface());
+
+const server = http.createServer((req, res) => {
+  // CORS headers for Stremio/Nuvio
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  // Ktuvit subtitle download proxy
+  if (req.url && req.url.startsWith('/proxy/ktuvit/')) {
+    const subId = req.url.split('/proxy/ktuvit/')[1];
+    if (!subId) {
+      res.writeHead(400);
+      res.end('Missing subtitle ID');
+      return;
+    }
+
+    const config = getConfig();
+    downloadKtuvit(subId, config.ktuvitEmail, config.ktuvitPassword)
+      .then(result => {
+        if (!result) {
+          res.writeHead(404);
+          res.end('Subtitle not found or Ktuvit auth failed');
+          return;
+        }
+        res.writeHead(200, {
+          'Content-Type': result.contentType,
+          'Content-Disposition': `attachment; filename="${subId}.srt"`,
+        });
+        res.end(result.buffer);
+      })
+      .catch(err => {
+        console.error('Ktuvit proxy error:', err.message);
+        res.writeHead(500);
+        res.end('Download failed');
+      });
+    return;
+  }
+
+  // All other requests go to stremio-addon-sdk router
+  addonRouter(req, res, () => {
+    res.writeHead(404);
+    res.end('Not Found');
+  });
+});
+
+server.listen(port, () => {
+  console.log(`
+╔═══════════════════════════════════════════════════════╗
+║   HebSubScout Stremio Addon v${manifest.version}                    ║
+║   Hebrew subtitle intelligence — free & open source   ║
+║                                                       ║
+║   Running on: http://localhost:${port}                    ║
+║   Install:    http://localhost:${port}/manifest.json      ║
+╠═══════════════════════════════════════════════════════╣
+║   Add this URL in Stremio or Nuvio to install.        ║
+╚═══════════════════════════════════════════════════════╝
 `);
+});
