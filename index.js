@@ -355,14 +355,16 @@ const server = http.createServer((req, res) => {
 
   // Debug endpoint — check indexer accessibility from server
   if (url === '/debug/indexers') {
-    const { searchYTS, searchEZTV } = require('./lib/indexers');
+    const { searchYTS, searchEZTV, searchIndexers } = require('./lib/indexers');
     Promise.allSettled([
       searchYTS('tt0111161'),
       searchEZTV('tt0944947', 1, 1),
+      searchIndexers('tt0111161', null, null),
     ]).then(results => {
       const report = {
-        yts: { status: results[0].status, count: results[0].value?.length || 0, sample: results[0].value?.[0]?.name || results[0].reason?.message },
-        eztv: { status: results[1].status, count: results[1].value?.length || 0, sample: results[1].value?.[0]?.name || results[1].reason?.message },
+        yts_shawshank: { status: results[0].status, count: results[0].value?.length || 0, sample: results[0].value?.[0]?.name || results[0].reason?.message },
+        eztv_got: { status: results[1].status, count: results[1].value?.length || 0, sample: results[1].value?.[0]?.name || results[1].reason?.message },
+        combined_shawshank: { status: results[2].status, count: results[2].value?.length || 0, sample: results[2].value?.[0]?.name || results[2].reason?.message },
       };
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(report, null, 2));
