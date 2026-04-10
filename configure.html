@@ -12,12 +12,14 @@
       --surface: #14142a;
       --surface-hover: #1a1a3a;
       --border: #2a2a4a;
+      --border-active: #6366f1;
       --text: #e8e8f0;
       --text-muted: #8888aa;
       --accent: #6366f1;
       --accent-hover: #818cf8;
       --success: #22c55e;
       --warning: #f59e0b;
+      --danger: #ef4444;
     }
 
     body {
@@ -28,152 +30,168 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 2rem;
+      padding: 1.5rem;
     }
 
-    .container {
-      width: 100%;
-      max-width: 540px;
-    }
+    .container { width: 100%; max-width: 480px; }
 
-    .logo-section {
+    /* Header */
+    .header {
       text-align: center;
       margin-bottom: 2rem;
     }
-
-    .logo-section h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-      background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+    .header h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), #a78bfa);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-
-    .logo-section p {
+    .header .subtitle {
       color: var(--text-muted);
-      font-size: 0.95rem;
+      font-size: 0.9rem;
+      margin-top: 0.4rem;
       line-height: 1.5;
     }
-
-    .badge {
+    .header .version {
       display: inline-block;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 999px;
-      padding: 0.25rem 0.75rem;
-      font-size: 0.75rem;
+      padding: 0.2rem 0.65rem;
+      font-size: 0.7rem;
       color: var(--success);
-      margin-top: 0.75rem;
+      margin-top: 0.6rem;
     }
 
-    .card {
+    /* Steps */
+    .step {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1rem;
+      padding: 1.25rem;
+      margin-bottom: 0.75rem;
+      transition: border-color 0.2s;
     }
-
-    .card h2 {
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
+    .step.active { border-color: var(--border-active); }
+    .step-header {
       display: flex;
       align-items: center;
+      gap: 0.65rem;
+      margin-bottom: 0.75rem;
+    }
+    .step-num {
+      width: 28px; height: 28px;
+      background: var(--accent);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step-title { font-size: 0.95rem; font-weight: 600; }
+    .step-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 0.75rem;
+    }
+
+    /* Input */
+    .input-row {
+      display: flex;
       gap: 0.5rem;
     }
-
-    .card h2 .tag {
-      font-size: 0.7rem;
-      background: var(--border);
-      border-radius: 4px;
-      padding: 0.15rem 0.5rem;
-      font-weight: 400;
-      color: var(--text-muted);
-    }
-
-    .field {
-      margin-bottom: 1rem;
-    }
-
-    .field:last-child {
-      margin-bottom: 0;
-    }
-
-    .field label {
-      display: block;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-bottom: 0.35rem;
-    }
-
-    .field input {
-      width: 100%;
-      padding: 0.65rem 0.85rem;
+    .input-row input {
+      flex: 1;
+      padding: 0.6rem 0.75rem;
       background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 8px;
       color: var(--text);
-      font-size: 0.9rem;
-      font-family: inherit;
+      font-size: 0.85rem;
+      font-family: 'SF Mono', 'Cascadia Code', monospace;
       direction: ltr;
       text-align: left;
       transition: border-color 0.2s;
     }
-
-    .field input:focus {
-      outline: none;
-      border-color: var(--accent);
-    }
-
-    .field input::placeholder {
-      color: #555;
-    }
-
-    .field .hint {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 0.3rem;
-    }
-
-    .install-section {
-      text-align: center;
-    }
-
-    .install-btn {
-      display: inline-block;
-      width: 100%;
-      padding: 0.85rem 1.5rem;
+    .input-row input:focus { outline: none; border-color: var(--accent); }
+    .input-row input::placeholder { color: #444; }
+    .copy-btn {
+      padding: 0.6rem 0.85rem;
       background: var(--accent);
       color: white;
       border: none;
-      border-radius: 10px;
-      font-size: 1rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
       font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .copy-btn:hover { background: var(--accent-hover); }
+
+    /* Status indicator */
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.75rem;
+      margin-top: 0.5rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+    }
+    .status.ok { color: var(--success); background: rgba(34,197,94,0.1); }
+    .status.waiting { color: var(--text-muted); background: rgba(136,136,170,0.1); }
+
+    /* Providers auto-included */
+    .providers {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .provider-tag {
+      padding: 0.3rem 0.6rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      color: var(--text);
+    }
+    .provider-tag.active { border-color: var(--success); color: var(--success); }
+
+    /* Install button */
+    .install-btn {
+      display: block;
+      width: 100%;
+      padding: 1rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 700;
       cursor: pointer;
       transition: background 0.2s, transform 0.1s;
       font-family: inherit;
+      margin-top: 0.5rem;
     }
+    .install-btn:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .install-btn:active { transform: translateY(0); }
 
-    .install-btn:hover {
-      background: var(--accent-hover);
-      transform: translateY(-1px);
-    }
-
-    .install-btn:active {
-      transform: translateY(0);
-    }
-
-    .install-url {
-      margin-top: 1rem;
-      padding: 0.65rem;
+    /* URL display */
+    .url-box {
+      margin-top: 0.75rem;
+      padding: 0.55rem 0.75rem;
       background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 8px;
       font-family: 'SF Mono', 'Cascadia Code', monospace;
-      font-size: 0.75rem;
+      font-size: 0.65rem;
       color: var(--text-muted);
       word-break: break-all;
       direction: ltr;
@@ -181,183 +199,188 @@
       cursor: pointer;
       transition: border-color 0.2s;
     }
-
-    .install-url:hover {
-      border-color: var(--accent);
-    }
-
-    .copy-hint {
-      font-size: 0.7rem;
+    .url-box:hover { border-color: var(--accent); }
+    .url-hint {
+      font-size: 0.65rem;
       color: var(--text-muted);
-      margin-top: 0.35rem;
+      text-align: center;
+      margin-top: 0.3rem;
     }
 
-    .features {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.75rem;
-      margin-top: 1.5rem;
+    /* Advanced toggle */
+    .advanced-toggle {
+      display: block;
+      width: 100%;
+      text-align: center;
+      padding: 0.6rem;
+      margin-top: 0.5rem;
+      background: none;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.2s, color 0.2s;
     }
-
-    .feature {
-      background: var(--surface);
+    .advanced-toggle:hover { border-color: var(--accent); color: var(--text); }
+    .advanced-section { display: none; }
+    .advanced-section.open { display: block; }
+    .advanced-section .step { border-style: dashed; }
+    .field { margin-bottom: 0.75rem; }
+    .field:last-child { margin-bottom: 0; }
+    .field label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+    .field input {
+      width: 100%;
+      padding: 0.55rem 0.7rem;
+      background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 0.85rem;
-      font-size: 0.8rem;
-    }
-
-    .feature strong {
-      display: block;
-      margin-bottom: 0.25rem;
+      color: var(--text);
       font-size: 0.85rem;
+      font-family: inherit;
+      direction: ltr;
+      text-align: left;
+      transition: border-color 0.2s;
     }
+    .field input:focus { outline: none; border-color: var(--accent); }
+    .field .hint { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem; }
+    .field .hint a { color: var(--accent); text-decoration: none; }
 
-    .feature span {
-      color: var(--text-muted);
-      line-height: 1.4;
-    }
-
+    /* Footer */
     .footer {
       text-align: center;
-      margin-top: 2rem;
-      font-size: 0.75rem;
+      margin-top: 1.5rem;
+      font-size: 0.7rem;
       color: var(--text-muted);
     }
-
-    .footer a {
-      color: var(--accent);
-      text-decoration: none;
-    }
+    .footer a { color: var(--accent); text-decoration: none; }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="logo-section">
+    <div class="header">
       <h1>HebSubScout</h1>
-      <p>כתוביות עבריות חכמות לסטרימיו — אחוז התאמה על כל מקור לפני שאתה בוחר</p>
-      <div class="badge">חינם וקוד פתוח</div>
+      <div class="subtitle">כתוביות עבריות חכמות — אחוז התאמה על כל מקור, בחירה אוטומטית</div>
+      <div class="version">v1.0.0 — חינם וקוד פתוח</div>
     </div>
 
-    <div class="card" style="border-color: var(--accent);">
-      <h2>Real-Debrid <span class="tag" style="color: var(--warning);">מומלץ</span></h2>
-      <div class="field">
-        <label>API Token</label>
-        <input type="text" id="rdToken" placeholder="הכנס את ה-API Token שלך מ-Real-Debrid" dir="ltr">
-        <div class="hint">
-          קבל את ה-Token מ-<a href="https://real-debrid.com/apitoken" target="_blank" style="color: var(--accent); text-decoration: none;">real-debrid.com/apitoken</a>
-          — בלי זה, מקורות יהיו טורנטים רגילים.
+    <!-- Step 1: RD Token -->
+    <div class="step active">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <div class="step-title">Real-Debrid API Token</div>
+      </div>
+      <div class="step-desc">העתק את ה-Token שלך מהקישור, הדבק כאן. בלי זה המקורות יהיו טורנטים רגילים.</div>
+      <div class="input-row">
+        <input type="text" id="rdToken" placeholder="הדבק API Token כאן" autocomplete="off">
+        <a class="copy-btn" href="https://real-debrid.com/apitoken" target="_blank">העתק מ-RD</a>
+      </div>
+      <div class="status waiting" id="rdStatus">ממתין ל-Token...</div>
+    </div>
+
+    <!-- Step 2: Auto providers -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div class="step-title">ספקי כתוביות</div>
+      </div>
+      <div class="step-desc">נכללים אוטומטית, לא צריך להגדיר כלום:</div>
+      <div class="providers">
+        <span class="provider-tag active">Wizdom.xyz</span>
+        <span class="provider-tag">Ktuvit.me</span>
+        <span class="provider-tag">OpenSubtitles</span>
+      </div>
+    </div>
+
+    <!-- Step 3: Install -->
+    <div class="step">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <div class="step-title">התקנה</div>
+      </div>
+      <button class="install-btn" id="installBtn">התקן ב-Stremio / Nuvio</button>
+      <div class="url-box" id="installUrl"></div>
+      <div class="url-hint" id="urlHint">לחץ על הקישור כדי להעתיק</div>
+    </div>
+
+    <!-- Advanced (collapsed) -->
+    <button class="advanced-toggle" id="advancedToggle">הגדרות מתקדמות (Ktuvit, OpenSubtitles, MediaFusion)</button>
+    <div class="advanced-section" id="advancedSection">
+      <div class="step">
+        <div class="step-header">
+          <div class="step-title">Ktuvit.me</div>
+        </div>
+        <div class="field">
+          <label>אימייל</label>
+          <input type="email" id="ktuvitEmail" placeholder="your@email.com">
+        </div>
+        <div class="field">
+          <label>סיסמא</label>
+          <input type="password" id="ktuvitPlain" placeholder="הסיסמא שלך (מומרת אוטומטית ל-hash)">
+          <div class="hint">הסיסמא מומרת ל-SHA-256 בדפדפן שלך — לא נשלחת לשום מקום</div>
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>Wizdom.xyz <span class="tag" style="color: var(--success);">אוטומטי</span></h2>
-      <p style="font-size: 0.85rem; color: var(--text-muted);">עובד אוטומטית ללא הגדרות. מאגר הכתוביות העברי הגדול ביותר.</p>
-    </div>
-
-    <div class="card">
-      <h2>Ktuvit.me <span class="tag">אופציונלי</span></h2>
-      <div class="field">
-        <label>אימייל</label>
-        <input type="email" id="ktuvitEmail" placeholder="your@email.com" autocomplete="email">
-      </div>
-      <div class="field">
-        <label>סיסמא (SHA-256 hash)</label>
-        <input type="password" id="ktuvitPassword" placeholder="SHA-256 hash of your password">
-        <div class="hint">
-          <a href="javascript:void(0)" id="hashHelper" style="color: var(--accent); text-decoration: none;">לחץ כאן כדי להמיר סיסמא ל-SHA-256</a>
+      <div class="step">
+        <div class="step-header">
+          <div class="step-title">OpenSubtitles</div>
+        </div>
+        <div class="field">
+          <label>API Key</label>
+          <input type="text" id="opensubsKey" placeholder="API key מ-opensubtitles.com">
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>OpenSubtitles <span class="tag">אופציונלי</span></h2>
-      <div class="field">
-        <label>API Key</label>
-        <input type="text" id="opensubsKey" placeholder="Your OpenSubtitles API key" dir="ltr">
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>MediaFusion <span class="tag">אופציונלי</span></h2>
-      <div class="field">
-        <label>Config URL</label>
-        <input type="url" id="mediafusionUrl" placeholder="https://mediafusion.example.com/your-encrypted-config" dir="ltr">
-        <div class="hint">כתובת ה-MediaFusion המוצפנת שלך (כולל Real-Debrid token)</div>
-      </div>
-    </div>
-
-    <div class="install-section">
-      <button class="install-btn" id="installBtn">התקן ב-Stremio</button>
-      <div class="install-url" id="installUrl" title="לחץ להעתקה"></div>
-      <div class="copy-hint" id="copyHint">לחץ על הקישור כדי להעתיק</div>
-    </div>
-
-    <div class="features">
-      <div class="feature">
-        <strong>[עב 92%]</strong>
-        <span>אחוז התאמה על כל מקור</span>
-      </div>
-      <div class="feature">
-        <strong>בחירה אוטומטית</strong>
-        <span>הכתובית הכי טובה נבחרת אוטומטית</span>
-      </div>
-      <div class="feature">
-        <strong>3 ספקים</strong>
-        <span>Wizdom + Ktuvit + OpenSubs</span>
-      </div>
-      <div class="feature">
-        <strong>Stremio + Nuvio</strong>
-        <span>עובד עם שניהם</span>
+      <div class="step">
+        <div class="step-header">
+          <div class="step-title">MediaFusion</div>
+        </div>
+        <div class="field">
+          <label>Config URL</label>
+          <input type="url" id="mediafusionUrl" placeholder="https://mediafusion...">
+        </div>
       </div>
     </div>
 
     <div class="footer">
-      <p><a href="https://github.com/shahar015/hebsubscout-stremio" target="_blank">GitHub</a> — נבנה עבור הקהילה הישראלית</p>
-    </div>
-  </div>
-
-  <!-- SHA-256 hash helper modal -->
-  <div id="hashModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:10; display:none; align-items:center; justify-content:center; padding:2rem;">
-    <div class="card" style="max-width:400px; width:100%;">
-      <h2>המרת סיסמא ל-SHA-256</h2>
-      <div class="field">
-        <label>הכנס סיסמא</label>
-        <input type="password" id="plainPassword" placeholder="הסיסמא שלך" dir="ltr">
-      </div>
-      <button class="install-btn" id="hashBtn" style="margin-top:0.5rem;">המר</button>
-      <div class="field" style="margin-top:0.75rem;">
-        <label>SHA-256 Hash</label>
-        <input type="text" id="hashedOutput" readonly dir="ltr" style="cursor:pointer;">
-        <div class="hint">הסיסמא לא נשלחת לשום מקום — ההמרה מתבצעת בדפדפן שלך</div>
-      </div>
+      <a href="https://github.com/shahar015/hebsubscout-stremio" target="_blank">GitHub</a> — נבנה עבור הקהילה הישראלית
     </div>
   </div>
 
   <script>
     const baseUrl = window.location.origin;
 
-    function buildConfig() {
+    // SHA-256 hash in browser
+    async function sha256(text) {
+      const encoded = new TextEncoder().encode(text);
+      const hash = await crypto.subtle.digest('SHA-256', encoded);
+      return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function buildConfig() {
       const config = {};
       const rdToken = document.getElementById('rdToken').value.trim();
       const email = document.getElementById('ktuvitEmail').value.trim();
-      const pass = document.getElementById('ktuvitPassword').value.trim();
+      const plainPass = document.getElementById('ktuvitPlain').value.trim();
       const osKey = document.getElementById('opensubsKey').value.trim();
       const mfUrl = document.getElementById('mediafusionUrl').value.trim();
-      // Build Torrentio URL with RD token + sensible defaults
+
       if (rdToken) {
         config.torrentioUrl = `https://torrentio.strem.fun/sort=qualitysize|realdebrid=${rdToken}`;
       }
       if (email) config.ktuvitEmail = email;
-      if (pass) config.ktuvitPassword = pass;
+      if (plainPass) config.ktuvitPassword = await sha256(plainPass);
       if (osKey) config.opensubsApiKey = osKey;
       if (mfUrl) config.mediafusionUrl = mfUrl;
       return config;
     }
 
-    function buildInstallUrl() {
-      const config = buildConfig();
+    async function buildInstallUrl() {
+      const config = await buildConfig();
       const hasConfig = Object.keys(config).length > 0;
       if (hasConfig) {
         const encoded = btoa(JSON.stringify(config))
@@ -367,73 +390,60 @@
       return `${baseUrl}/manifest.json`;
     }
 
-    function updateUrl() {
-      const url = buildInstallUrl();
+    async function updateUrl() {
+      const url = await buildInstallUrl();
       document.getElementById('installUrl').textContent = url;
     }
 
-    // Update URL on any input change
-    document.querySelectorAll('input').forEach(input => {
-      input.addEventListener('input', updateUrl);
+    // RD token status
+    document.getElementById('rdToken').addEventListener('input', function() {
+      const status = document.getElementById('rdStatus');
+      if (this.value.trim()) {
+        status.className = 'status ok';
+        status.textContent = 'Token הוזן';
+      } else {
+        status.className = 'status waiting';
+        status.textContent = 'ממתין ל-Token...';
+      }
+      updateUrl();
     });
 
-    // Install button — open stremio:// protocol
-    document.getElementById('installBtn').addEventListener('click', () => {
-      const url = buildInstallUrl();
+    // Update URL on any input
+    document.querySelectorAll('input').forEach(el => el.addEventListener('input', updateUrl));
+
+    // Install button
+    document.getElementById('installBtn').addEventListener('click', async () => {
+      const url = await buildInstallUrl();
       window.location.href = 'stremio://' + url.replace(/^https?:\/\//, '');
     });
 
-    // Click to copy URL
+    // Copy URL on click
     document.getElementById('installUrl').addEventListener('click', async () => {
       const url = document.getElementById('installUrl').textContent;
       try {
         await navigator.clipboard.writeText(url);
-        document.getElementById('copyHint').textContent = 'הועתק!';
-        setTimeout(() => {
-          document.getElementById('copyHint').textContent = 'לחץ על הקישור כדי להעתיק';
-        }, 2000);
+        document.getElementById('urlHint').textContent = 'הועתק!';
+        setTimeout(() => { document.getElementById('urlHint').textContent = 'לחץ על הקישור כדי להעתיק'; }, 2000);
       } catch {
-        // Fallback for older browsers
         const ta = document.createElement('textarea');
         ta.value = url;
         document.body.appendChild(ta);
         ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
-        document.getElementById('copyHint').textContent = 'הועתק!';
       }
     });
 
-    // SHA-256 hash helper
-    document.getElementById('hashHelper').addEventListener('click', () => {
-      document.getElementById('hashModal').style.display = 'flex';
+    // Advanced toggle
+    document.getElementById('advancedToggle').addEventListener('click', () => {
+      const section = document.getElementById('advancedSection');
+      const btn = document.getElementById('advancedToggle');
+      section.classList.toggle('open');
+      btn.textContent = section.classList.contains('open')
+        ? 'הסתר הגדרות מתקדמות'
+        : 'הגדרות מתקדמות (Ktuvit, OpenSubtitles, MediaFusion)';
     });
 
-    document.getElementById('hashModal').addEventListener('click', (e) => {
-      if (e.target === document.getElementById('hashModal')) {
-        document.getElementById('hashModal').style.display = 'none';
-      }
-    });
-
-    document.getElementById('hashBtn').addEventListener('click', async () => {
-      const plain = document.getElementById('plainPassword').value;
-      if (!plain) return;
-      const encoded = new TextEncoder().encode(plain);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      document.getElementById('hashedOutput').value = hashHex;
-      // Auto-fill the password field
-      document.getElementById('ktuvitPassword').value = hashHex;
-      updateUrl();
-    });
-
-    document.getElementById('hashedOutput').addEventListener('click', function() {
-      this.select();
-      navigator.clipboard.writeText(this.value);
-    });
-
-    // Initialize
     updateUrl();
   </script>
 </body>
