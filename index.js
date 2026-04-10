@@ -208,7 +208,8 @@ builder.defineSubtitlesHandler(async ({ type, id, extra }) => {
   }
 
   // Build the base URL for proxied downloads
-  const baseUrl = process.env.BASE_URL || `http://localhost:${port}`;
+  // Render auto-sets RENDER_EXTERNAL_URL, otherwise fall back to BASE_URL or localhost
+  const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.BASE_URL || `http://localhost:${port}`;
 
   // Return as Stremio subtitle objects — best match first (auto-selected by Stremio)
   const result = sorted.map((sub) => {
