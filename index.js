@@ -253,22 +253,27 @@ builder.defineSubtitlesHandler(async ({ type, id, extra }) => {
   // Build the base URL for proxied downloads
   const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.BASE_URL || `http://localhost:${port}`;
 
-  // All subtitle downloads proxy through us (encoding fix: Win-1255 → UTF-8, unzip)
-  const result = sorted.map((sub) => {
+  // All subtitle downloads proxy through us (encoding fix + RTL fix)
+  const result = sorted.map((sub, i) => {
     const rawUrl = sub.downloadUrl || '';
     if (!rawUrl || rawUrl.startsWith('PROXY:')) return null;
 
-    // Proxy URL: encode the original download URL
     const encodedUrl = Buffer.from(rawUrl).toString('base64url');
     const proxyUrl = `${baseUrl}/proxy/sub/${encodedUrl}`;
 
-    // Show match % in subtitle name
-    const matchLabel = sub.score ? `[${sub.score}%] ` : '';
+    // First subtitle: proper "heb" lang → auto-selected under עברית
+    // Rest: show release name so user can identify which matches their source
+    let lang = 'heb';
+    if (i > 0 && sub.name) {
+      // Shorten release name: keep quality + group, drop title
+      const shortName = sub.name.length > 40 ? sub.name.slice(0, 40) + '…' : sub.name;
+      lang = `עב · ${shortName}`;
+    }
 
     return {
       id: `hebsubscout-${sub.provider}-${sub.id}`,
       url: proxyUrl,
-      lang: 'heb',
+      lang,
     };
   }).filter(Boolean);
 
@@ -369,7 +374,22 @@ const server = http.createServer((req, res) => {
           text = iconv.decode(srtContent, 'windows-1255');
         }
 
-        const utf8Buf = Buffer.from(text, 'utf-8');
+        // Fix RTL: prepend RLM (Right-to-Left Mark) to each subtitle text line
+        // This fixes punctuation appearing on the wrong side
+        const RLM = '\u200F';
+        const lines = text.split('\n');
+        const fixedLines = lines.map(line => {
+          const trimmed = line.trim();
+          // Skip empty lines, sequence numbers, and timestamps
+          if (!trimmed) return line;
+          if (/^\d+$/.test(trimmed)) return line;
+          if (/-->/.test(trimmed)) return line;
+          // Subtitle text line — add RLM + wrap in RTL embedding
+          return `\u202B${trimmed}\u202C`;
+        });
+        const fixedText = fixedLines.join('\n');
+
+        const utf8Buf = Buffer.from('\uFEFF' + fixedText, 'utf-8'); // BOM + content
         res.writeHead(200, {
           'Content-Type': 'text/srt; charset=utf-8',
           'Content-Disposition': 'attachment; filename="subtitle.srt"',
