@@ -61,6 +61,7 @@ function getConfig(userConfig) {
     ktuvitPassword: (userConfig && userConfig.ktuvitPassword) || process.env.KTUVIT_PASSWORD || '',
     opensubsApiKey: (userConfig && userConfig.opensubsApiKey) || process.env.OPENSUBS_API_KEY || '',
     mediafusionUrl: (userConfig && userConfig.mediafusionUrl) || process.env.MEDIAFUSION_URL || '',
+    torrentioUrl: (userConfig && userConfig.torrentioUrl) || process.env.TORRENTIO_URL || '',
   };
 }
 
