@@ -88,36 +88,36 @@ function decodeConfig(encoded) {
 // Store per-request user config (set by URL path middleware)
 let requestConfig = null;
 
+/**
+ * Quick check if buffer is valid UTF-8 (checks first 200 bytes for Hebrew range).
+ */
+function isValidUtf8(buf) {
+  try {
+    const str = buf.toString('utf-8');
+    // If Hebrew chars appear correctly (Unicode range), it's UTF-8
+    return /[\u0590-\u05FF]/.test(str.slice(0, 500));
+  } catch { return false; }
+}
+
 function buildStreamTitle(source) {
-  const parts = [];
-
-  // RD cached indicator
-  if (source.isCached) parts.push('⚡ RD');
-
-  // Quality + info tags
-  let qualityStr = source.quality || '';
+  // Line 1: Quality + codec + Hebrew match %
+  let line1 = source.quality || '';
   if (source.info && source.info.length > 0) {
-    qualityStr += ' ' + source.info.join(' ');
+    line1 += ' ' + source.info.slice(0, 3).join(' '); // Max 3 tags
   }
-  if (qualityStr.trim()) parts.push(qualityStr.trim());
-
-  // Hebrew subtitle match indicator — THE KEY FEATURE
   if (source.matchPct > 0) {
-    parts.push(`[עב ${source.matchPct}%]`);
+    line1 += ` [עב ${source.matchPct}%]`;
   } else if (source.matchPct === 0 && source._subsChecked) {
-    parts.push('[עב ✗]');
+    line1 += ' [עב ✗]';
   }
 
-  // Size + seeders
+  // Line 2: Size + seeders
   const meta = [];
   if (source.size) meta.push(source.size);
   if (source.seeders > 0) meta.push(`👤 ${source.seeders}`);
-  if (meta.length > 0) parts.push(meta.join(' '));
+  const line2 = meta.join(' ');
 
-  // Source indexer
-  if (source.tracker) parts.push(source.tracker);
-
-  return parts.join(' | ');
+  return [line1.trim(), line2].filter(Boolean).join('\n');
 }
 
 // =========================================================================
@@ -202,7 +202,7 @@ builder.defineStreamHandler(async ({ type, id }) => {
         resolvedStreams.push({
           url: resolved.url,
           title: buildStreamTitle({ ...src, isCached: true }),
-          name: `RD+ ${src.quality || ''}`,
+          name: `⚡ RD\n${src.quality || ''}`,
           behaviorHints: {
             filename: resolved.filename || src.name,
             videoSize: resolved.filesize || undefined,
@@ -253,26 +253,22 @@ builder.defineSubtitlesHandler(async ({ type, id, extra }) => {
   // Build the base URL for proxied downloads
   const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.BASE_URL || `http://localhost:${port}`;
 
-  // Return as Stremio subtitle objects — best match first (auto-selected by Stremio)
+  // All subtitle downloads proxy through us (encoding fix: Win-1255 → UTF-8, unzip)
   const result = sorted.map((sub) => {
-    let url = sub.downloadUrl || '';
+    const rawUrl = sub.downloadUrl || '';
+    if (!rawUrl || rawUrl.startsWith('PROXY:')) return null;
 
-    // Replace proxy placeholder with actual proxy URL
-    if (url.startsWith('PROXY:ktuvit:')) {
-      const subId = url.replace('PROXY:ktuvit:', '');
-      url = `${baseUrl}/proxy/ktuvit/${subId}`;
-    }
+    // Proxy URL: encode the original download URL
+    const encodedUrl = Buffer.from(rawUrl).toString('base64url');
+    const proxyUrl = `${baseUrl}/proxy/sub/${encodedUrl}`;
 
-    if (!url) return null;
-
-    // Show match % in subtitle name if we matched against a source
+    // Show match % in subtitle name
     const matchLabel = sub.score ? `[${sub.score}%] ` : '';
 
     return {
       id: `hebsubscout-${sub.provider}-${sub.id}`,
-      url,
+      url: proxyUrl,
       lang: 'heb',
-      SubtitleName: `${matchLabel}${sub.name} (${sub.provider})`,
     };
   }).filter(Boolean);
 
@@ -320,6 +316,72 @@ const server = http.createServer((req, res) => {
         req.url = rest;
       }
     }
+  }
+
+  // Universal subtitle proxy — downloads, unzips, re-encodes to UTF-8
+  if (url.startsWith('/proxy/sub/')) {
+    const encoded = url.split('/proxy/sub/')[1];
+    if (!encoded) { res.writeHead(400); res.end('Missing URL'); return; }
+
+    const originalUrl = Buffer.from(encoded, 'base64url').toString();
+    const fetch = require('node-fetch');
+    const zlib = require('zlib');
+
+    fetch(originalUrl, { timeout: 15000, headers: { 'User-Agent': 'HebSubScout/2.0' } })
+      .then(async (dlResp) => {
+        if (!dlResp.ok) { res.writeHead(502); res.end('Download failed'); return; }
+        const buf = await dlResp.buffer();
+
+        let srtContent = null;
+
+        // Check if it's a ZIP file (PK header)
+        if (buf[0] === 0x50 && buf[1] === 0x4B) {
+          // Parse ZIP manually — find the first .srt file
+          try {
+            const AdmZip = require('adm-zip');
+            const zip = new AdmZip(buf);
+            const entries = zip.getEntries();
+            const srtEntry = entries.find(e => /\.srt$/i.test(e.entryName));
+            if (srtEntry) {
+              srtContent = srtEntry.getData();
+            }
+          } catch {
+            // If adm-zip not available, try returning raw ZIP
+            res.writeHead(200, { 'Content-Type': 'application/zip' });
+            res.end(buf);
+            return;
+          }
+        } else {
+          srtContent = buf;
+        }
+
+        if (!srtContent) { res.writeHead(404); res.end('No SRT found'); return; }
+
+        // Detect and convert encoding to UTF-8
+        let text;
+        // Check for UTF-8 BOM or valid UTF-8
+        const hasUtf8Bom = srtContent[0] === 0xEF && srtContent[1] === 0xBB && srtContent[2] === 0xBF;
+        if (hasUtf8Bom || isValidUtf8(srtContent)) {
+          text = srtContent.toString('utf-8');
+        } else {
+          // Assume Windows-1255 (Hebrew) and convert
+          const iconv = require('iconv-lite');
+          text = iconv.decode(srtContent, 'windows-1255');
+        }
+
+        const utf8Buf = Buffer.from(text, 'utf-8');
+        res.writeHead(200, {
+          'Content-Type': 'text/srt; charset=utf-8',
+          'Content-Disposition': 'attachment; filename="subtitle.srt"',
+        });
+        res.end(utf8Buf);
+      })
+      .catch(err => {
+        console.error('[HebSubScout] Subtitle proxy error:', err.message);
+        res.writeHead(502);
+        res.end('Download failed');
+      });
+    return;
   }
 
   // Ktuvit subtitle download proxy

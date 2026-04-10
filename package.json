@@ -8,8 +8,9 @@
     "dev": "node --watch index.js"
   },
   "dependencies": {
-    "stremio-addon-sdk": "^1.6.10",
+    "adm-zip": "^0.5.17",
     "node-fetch": "^2.7.0",
+    "stremio-addon-sdk": "^1.6.10",
     "string-similarity": "^4.0.4"
   },
   "engines": {
