@@ -1,6 +1,6 @@
 {
   "name": "hebsubscout-stremio",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Hebrew subtitle intelligence for Stremio — match % on every source, auto-select best subtitle",
   "main": "index.js",
   "scripts": {

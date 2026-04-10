@@ -4,25 +4,32 @@
 
 Stremio/Nuvio addon that provides **Hebrew subtitle intelligence** — shows match % on every source BEFORE the user picks, and auto-selects the best matching Hebrew subtitle on playback. Free & open source alternative to "Heb Subs Premium" (paid).
 
-**Status:** v1.0.0 — core logic built, needs live testing and polish.
+**Status:** v2.0.0 — own torrent pipeline with Real-Debrid, deployed on Render.
+
+**Live:** https://hebsubscout-stremio.onrender.com
 
 ## How It Works
 
-1. User installs addon in Stremio or Nuvio via `http://HOST:7070/manifest.json`
-2. When user browses a movie/show, Stremio calls our stream + subtitle handlers
-3. **Stream handler:** Fetches Torrentio + MediaFusion sources, fetches Hebrew subs from Wizdom/Ktuvit/OpenSubs in parallel, enriches each source title with `[עב XX%]`
-4. **Subtitle handler:** Returns Hebrew subtitles sorted by match quality (best first = auto-selected)
+1. User configures RD token + optional subtitle providers on configure page
+2. Gets a unique install URL with config encoded in path (base64url)
+3. **Stream handler:** Searches YTS/EZTV for torrents → checks RD instant availability → resolves cached to direct HTTP links → enriches with `[עב XX%]`
+4. **Subtitle handler:** Returns Hebrew subtitles from Wizdom/Ktuvit/OpenSubs sorted by match quality (best first = auto-selected)
 
 ## Architecture
 
 ```
 hebsubscout-stremio/
-├── index.js          # Entry point — manifest, stream handler, subtitle handler, HTTP server
+├── index.js           # Entry point — manifest, handlers, HTTP server with proxy + config URLs
+├── configure.html     # Web installer page (Hebrew UI, 3-step setup)
 ├── lib/
-│   ├── matcher.js    # Fuzzy matching algorithm (ported from Python): title(30) + quality(25) + group(20) + codec(10) + S/E(10) + audio(5)
-│   ├── providers.js  # Hebrew subtitle providers: Wizdom.xyz, Ktuvit.me, OpenSubtitles — all parallel
-│   ├── scrapers.js   # Source scrapers: Torrentio + MediaFusion — parallel, deduplicated
-│   └── cache.js      # In-memory TTL cache (30 minutes)
+│   ├── matcher.js     # Fuzzy matching algorithm: title(30) + quality(25) + group(20) + codec(10) + S/E(10) + audio(5)
+│   ├── providers.js   # Hebrew subtitle providers: Wizdom.xyz, Ktuvit.me, OpenSubtitles
+│   ├── indexers.js    # Torrent indexers: YTS (movies) + EZTV (TV) — search by IMDB ID
+│   ├── realdebrid.js  # RD API: instant availability, torrent resolve, unrestrict links
+│   ├── scrapers.js    # Legacy Torrentio scraper (kept for self-hosted use)
+│   └── cache.js       # In-memory TTL cache
+├── Dockerfile
+├── render.yaml
 ├── package.json
 └── .gitignore
 ```
