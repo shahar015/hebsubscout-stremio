@@ -13,6 +13,8 @@ const { searchAll, downloadKtuvit } = require('./lib/providers');
 const { scrapeAll } = require('./lib/scrapers');
 const cache = require('./lib/cache');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
 // =========================================================================
 // MANIFEST
@@ -52,15 +54,36 @@ function parseId(id) {
   };
 }
 
-function getConfig() {
-  // Config from environment variables (for self-hosted deployment)
+function getConfig(userConfig) {
+  // Merge: user config (from URL path) overrides env vars
   return {
-    ktuvitEmail: process.env.KTUVIT_EMAIL || '',
-    ktuvitPassword: process.env.KTUVIT_PASSWORD || '',
-    opensubsApiKey: process.env.OPENSUBS_API_KEY || '',
-    mediafusionUrl: process.env.MEDIAFUSION_URL || '',
+    ktuvitEmail: (userConfig && userConfig.ktuvitEmail) || process.env.KTUVIT_EMAIL || '',
+    ktuvitPassword: (userConfig && userConfig.ktuvitPassword) || process.env.KTUVIT_PASSWORD || '',
+    opensubsApiKey: (userConfig && userConfig.opensubsApiKey) || process.env.OPENSUBS_API_KEY || '',
+    mediafusionUrl: (userConfig && userConfig.mediafusionUrl) || process.env.MEDIAFUSION_URL || '',
   };
 }
+
+/**
+ * Encode user config to URL-safe base64 for embedding in addon URL.
+ */
+function encodeConfig(config) {
+  return Buffer.from(JSON.stringify(config)).toString('base64url');
+}
+
+/**
+ * Decode user config from URL path prefix.
+ */
+function decodeConfig(encoded) {
+  try {
+    return JSON.parse(Buffer.from(encoded, 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
+
+// Store per-request user config (set by URL path middleware)
+let requestConfig = null;
 
 function buildStreamTitle(source) {
   const parts = [];
@@ -98,7 +121,7 @@ function buildStreamTitle(source) {
 builder.defineStreamHandler(async ({ type, id }) => {
   console.log(`[HebSubScout] Stream request: ${type} ${id}`);
   const { imdbId, season, episode } = parseId(id);
-  const config = getConfig();
+  const config = getConfig(requestConfig);
 
   // Fetch sources and Hebrew subtitles in parallel
   const [sources, subtitles] = await Promise.all([
@@ -167,7 +190,7 @@ builder.defineStreamHandler(async ({ type, id }) => {
 builder.defineSubtitlesHandler(async ({ type, id, extra }) => {
   console.log(`[HebSubScout] Subtitle request: ${type} ${id}`);
   const { imdbId, season, episode } = parseId(id);
-  const config = getConfig();
+  const config = getConfig(requestConfig);
 
   const subtitles = await searchAll(imdbId, season, episode, config);
 
@@ -218,21 +241,50 @@ const port = process.env.PORT || 7070;
 
 const addonRouter = getRouter(builder.getInterface());
 
+// Known Stremio addon URL path prefixes
+const ADDON_PATHS = ['/manifest.json', '/stream/', '/subtitles/', '/meta/', '/catalog/'];
+
 const server = http.createServer((req, res) => {
   // CORS headers for Stremio/Nuvio
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200);
+    res.end();
+    return;
+  }
+
+  let url = req.url || '/';
+
+  // Extract per-user config from URL path prefix.
+  // Pattern: /{base64config}/manifest.json, /{base64config}/stream/..., etc.
+  // If no config prefix, fall through to env var config.
+  requestConfig = null;
+  const pathParts = url.split('/').filter(Boolean);
+  if (pathParts.length >= 2) {
+    const possibleConfig = pathParts[0];
+    const rest = '/' + pathParts.slice(1).join('/');
+    if (ADDON_PATHS.some(p => rest.startsWith(p))) {
+      const decoded = decodeConfig(possibleConfig);
+      if (decoded) {
+        requestConfig = decoded;
+        url = rest;
+        req.url = rest;
+      }
+    }
+  }
+
   // Ktuvit subtitle download proxy
-  if (req.url && req.url.startsWith('/proxy/ktuvit/')) {
-    const subId = req.url.split('/proxy/ktuvit/')[1];
+  if (url.startsWith('/proxy/ktuvit/')) {
+    const subId = url.split('/proxy/ktuvit/')[1];
     if (!subId) {
       res.writeHead(400);
       res.end('Missing subtitle ID');
       return;
     }
 
-    const config = getConfig();
+    const config = getConfig(requestConfig);
     downloadKtuvit(subId, config.ktuvitEmail, config.ktuvitPassword)
       .then(result => {
         if (!result) {
@@ -251,6 +303,21 @@ const server = http.createServer((req, res) => {
         res.writeHead(500);
         res.end('Download failed');
       });
+    return;
+  }
+
+  // Serve configure page (web installer)
+  if (url === '/' || url === '/configure' || url === '/configure.html') {
+    const htmlPath = path.join(__dirname, 'configure.html');
+    fs.readFile(htmlPath, (err, data) => {
+      if (err) {
+        res.writeHead(500);
+        res.end('Could not load configure page');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(data);
+    });
     return;
   }
 

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: hebsubscout-stremio
+    runtime: node
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: BASE_URL
+        fromRenderService:
+          name: hebsubscout-stremio
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: KTUVIT_EMAIL
+        sync: false
+      - key: KTUVIT_PASSWORD
+        sync: false
+      - key: OPENSUBS_API_KEY
+        sync: false
+      - key: MEDIAFUSION_URL
+        sync: false
+    plan: free
+    healthCheckPath: /manifest.json

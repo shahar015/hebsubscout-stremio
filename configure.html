@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HebSubScout — התקנה</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0a0a12;
+      --surface: #14142a;
+      --surface-hover: #1a1a3a;
+      --border: #2a2a4a;
+      --text: #e8e8f0;
+      --text-muted: #8888aa;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --success: #22c55e;
+      --warning: #f59e0b;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 540px;
+    }
+
+    .logo-section {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .logo-section h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo-section p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .badge {
+      display: inline-block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.75rem;
+      color: var(--success);
+      margin-top: 0.75rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card h2 .tag {
+      font-size: 0.7rem;
+      background: var(--border);
+      border-radius: 4px;
+      padding: 0.15rem 0.5rem;
+      font-weight: 400;
+      color: var(--text-muted);
+    }
+
+    .field {
+      margin-bottom: 1rem;
+    }
+
+    .field:last-child {
+      margin-bottom: 0;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: inherit;
+      direction: ltr;
+      text-align: left;
+      transition: border-color 0.2s;
+    }
+
+    .field input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .field input::placeholder {
+      color: #555;
+    }
+
+    .field .hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.3rem;
+    }
+
+    .install-section {
+      text-align: center;
+    }
+
+    .install-btn {
+      display: inline-block;
+      width: 100%;
+      padding: 0.85rem 1.5rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      font-family: inherit;
+    }
+
+    .install-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+    }
+
+    .install-btn:active {
+      transform: translateY(0);
+    }
+
+    .install-url {
+      margin-top: 1rem;
+      padding: 0.65rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: 'SF Mono', 'Cascadia Code', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      word-break: break-all;
+      direction: ltr;
+      text-align: left;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .install-url:hover {
+      border-color: var(--accent);
+    }
+
+    .copy-hint {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.35rem;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+
+    .feature {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem;
+      font-size: 0.8rem;
+    }
+
+    .feature strong {
+      display: block;
+      margin-bottom: 0.25rem;
+      font-size: 0.85rem;
+    }
+
+    .feature span {
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo-section">
+      <h1>HebSubScout</h1>
+      <p>כתוביות עבריות חכמות לסטרימיו — אחוז התאמה על כל מקור לפני שאתה בוחר</p>
+      <div class="badge">חינם וקוד פתוח</div>
+    </div>
+
+    <div class="card">
+      <h2>Wizdom.xyz <span class="tag">אוטומטי</span></h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">עובד אוטומטית ללא הגדרות. מאגר הכתוביות העברי הגדול ביותר.</p>
+    </div>
+
+    <div class="card">
+      <h2>Ktuvit.me <span class="tag">אופציונלי</span></h2>
+      <div class="field">
+        <label>אימייל</label>
+        <input type="email" id="ktuvitEmail" placeholder="your@email.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>סיסמא (SHA-256 hash)</label>
+        <input type="password" id="ktuvitPassword" placeholder="SHA-256 hash of your password">
+        <div class="hint">
+          <a href="javascript:void(0)" id="hashHelper" style="color: var(--accent); text-decoration: none;">לחץ כאן כדי להמיר סיסמא ל-SHA-256</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>OpenSubtitles <span class="tag">אופציונלי</span></h2>
+      <div class="field">
+        <label>API Key</label>
+        <input type="text" id="opensubsKey" placeholder="Your OpenSubtitles API key" dir="ltr">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>MediaFusion <span class="tag">אופציונלי</span></h2>
+      <div class="field">
+        <label>Config URL</label>
+        <input type="url" id="mediafusionUrl" placeholder="https://mediafusion.example.com/your-encrypted-config" dir="ltr">
+        <div class="hint">כתובת ה-MediaFusion המוצפנת שלך (כולל Real-Debrid token)</div>
+      </div>
+    </div>
+
+    <div class="install-section">
+      <button class="install-btn" id="installBtn">התקן ב-Stremio</button>
+      <div class="install-url" id="installUrl" title="לחץ להעתקה"></div>
+      <div class="copy-hint" id="copyHint">לחץ על הקישור כדי להעתיק</div>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <strong>[עב 92%]</strong>
+        <span>אחוז התאמה על כל מקור</span>
+      </div>
+      <div class="feature">
+        <strong>בחירה אוטומטית</strong>
+        <span>הכתובית הכי טובה נבחרת אוטומטית</span>
+      </div>
+      <div class="feature">
+        <strong>3 ספקים</strong>
+        <span>Wizdom + Ktuvit + OpenSubs</span>
+      </div>
+      <div class="feature">
+        <strong>Stremio + Nuvio</strong>
+        <span>עובד עם שניהם</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p><a href="https://github.com/shahar015/hebsubscout-stremio" target="_blank">GitHub</a> — נבנה עבור הקהילה הישראלית</p>
+    </div>
+  </div>
+
+  <!-- SHA-256 hash helper modal -->
+  <div id="hashModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:10; display:none; align-items:center; justify-content:center; padding:2rem;">
+    <div class="card" style="max-width:400px; width:100%;">
+      <h2>המרת סיסמא ל-SHA-256</h2>
+      <div class="field">
+        <label>הכנס סיסמא</label>
+        <input type="password" id="plainPassword" placeholder="הסיסמא שלך" dir="ltr">
+      </div>
+      <button class="install-btn" id="hashBtn" style="margin-top:0.5rem;">המר</button>
+      <div class="field" style="margin-top:0.75rem;">
+        <label>SHA-256 Hash</label>
+        <input type="text" id="hashedOutput" readonly dir="ltr" style="cursor:pointer;">
+        <div class="hint">הסיסמא לא נשלחת לשום מקום — ההמרה מתבצעת בדפדפן שלך</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const baseUrl = window.location.origin;
+
+    function buildConfig() {
+      const config = {};
+      const email = document.getElementById('ktuvitEmail').value.trim();
+      const pass = document.getElementById('ktuvitPassword').value.trim();
+      const osKey = document.getElementById('opensubsKey').value.trim();
+      const mfUrl = document.getElementById('mediafusionUrl').value.trim();
+      if (email) config.ktuvitEmail = email;
+      if (pass) config.ktuvitPassword = pass;
+      if (osKey) config.opensubsApiKey = osKey;
+      if (mfUrl) config.mediafusionUrl = mfUrl;
+      return config;
+    }
+
+    function buildInstallUrl() {
+      const config = buildConfig();
+      const hasConfig = Object.keys(config).length > 0;
+      if (hasConfig) {
+        const encoded = btoa(JSON.stringify(config))
+          .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        return `${baseUrl}/${encoded}/manifest.json`;
+      }
+      return `${baseUrl}/manifest.json`;
+    }
+
+    function updateUrl() {
+      const url = buildInstallUrl();
+      document.getElementById('installUrl').textContent = url;
+    }
+
+    // Update URL on any input change
+    document.querySelectorAll('input').forEach(input => {
+      input.addEventListener('input', updateUrl);
+    });
+
+    // Install button — open stremio:// protocol
+    document.getElementById('installBtn').addEventListener('click', () => {
+      const url = buildInstallUrl();
+      window.location.href = 'stremio://' + url.replace(/^https?:\/\//, '');
+    });
+
+    // Click to copy URL
+    document.getElementById('installUrl').addEventListener('click', async () => {
+      const url = document.getElementById('installUrl').textContent;
+      try {
+        await navigator.clipboard.writeText(url);
+        document.getElementById('copyHint').textContent = 'הועתק!';
+        setTimeout(() => {
+          document.getElementById('copyHint').textContent = 'לחץ על הקישור כדי להעתיק';
+        }, 2000);
+      } catch {
+        // Fallback for older browsers
+        const ta = document.createElement('textarea');
+        ta.value = url;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        document.getElementById('copyHint').textContent = 'הועתק!';
+      }
+    });
+
+    // SHA-256 hash helper
+    document.getElementById('hashHelper').addEventListener('click', () => {
+      document.getElementById('hashModal').style.display = 'flex';
+    });
+
+    document.getElementById('hashModal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('hashModal')) {
+        document.getElementById('hashModal').style.display = 'none';
+      }
+    });
+
+    document.getElementById('hashBtn').addEventListener('click', async () => {
+      const plain = document.getElementById('plainPassword').value;
+      if (!plain) return;
+      const encoded = new TextEncoder().encode(plain);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      document.getElementById('hashedOutput').value = hashHex;
+      // Auto-fill the password field
+      document.getElementById('ktuvitPassword').value = hashHex;
+      updateUrl();
+    });
+
+    document.getElementById('hashedOutput').addEventListener('click', function() {
+      this.select();
+      navigator.clipboard.writeText(this.value);
+    });
+
+    // Initialize
+    updateUrl();
+  </script>
+</body>
+</html>
