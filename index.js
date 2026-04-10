@@ -10,7 +10,9 @@
 const { addonBuilder, getRouter } = require('stremio-addon-sdk');
 const { enrichStreams, matchSource } = require('./lib/matcher');
 const { searchAll, downloadKtuvit } = require('./lib/providers');
-const { scrapeAll } = require('./lib/scrapers');
+const { searchIndexers } = require('./lib/indexers');
+const { checkInstantAvailability, resolveTorrent } = require('./lib/realdebrid');
+const { detectQuality, detectInfo } = require('./lib/scrapers');
 const cache = require('./lib/cache');
 const http = require('http');
 const fs = require('fs');
@@ -22,9 +24,9 @@ const path = require('path');
 
 const manifest = {
   id: 'com.hebsubscout.stremio',
-  version: '1.0.0',
+  version: '2.0.0',
   name: 'HebSubScout',
-  description: 'Hebrew subtitle intelligence — see match % on every source BEFORE you pick. Auto-selects best Hebrew subtitle. Free & open source.',
+  description: 'Hebrew subtitle intelligence — match % on every source, auto-selects best subtitle. Built-in Real-Debrid. Free & open source.',
   logo: 'https://shahar015.github.io/hebsubscout/repo/plugin.video.hebscout/icon.png',
   background: 'https://shahar015.github.io/hebsubscout/repo/skin.hebscout/fanart.jpg',
   resources: ['stream', 'subtitles'],
@@ -57,11 +59,11 @@ function parseId(id) {
 function getConfig(userConfig) {
   // Merge: user config (from URL path) overrides env vars
   return {
+    rdToken: (userConfig && userConfig.rdToken) || process.env.RD_TOKEN || '',
     ktuvitEmail: (userConfig && userConfig.ktuvitEmail) || process.env.KTUVIT_EMAIL || '',
     ktuvitPassword: (userConfig && userConfig.ktuvitPassword) || process.env.KTUVIT_PASSWORD || '',
     opensubsApiKey: (userConfig && userConfig.opensubsApiKey) || process.env.OPENSUBS_API_KEY || '',
     mediafusionUrl: (userConfig && userConfig.mediafusionUrl) || process.env.MEDIAFUSION_URL || '',
-    torrentioUrl: (userConfig && userConfig.torrentioUrl) || process.env.TORRENTIO_URL || '',
   };
 }
 
@@ -89,6 +91,9 @@ let requestConfig = null;
 function buildStreamTitle(source) {
   const parts = [];
 
+  // RD cached indicator
+  if (source.isCached) parts.push('⚡ RD');
+
   // Quality + info tags
   let qualityStr = source.quality || '';
   if (source.info && source.info.length > 0) {
@@ -109,7 +114,7 @@ function buildStreamTitle(source) {
   if (source.seeders > 0) meta.push(`👤 ${source.seeders}`);
   if (meta.length > 0) parts.push(meta.join(' '));
 
-  // Tracker/indexer
+  // Source indexer
   if (source.tracker) parts.push(source.tracker);
 
   return parts.join(' | ');
@@ -123,27 +128,51 @@ builder.defineStreamHandler(async ({ type, id }) => {
   console.log(`[HebSubScout] Stream request: ${type} ${id}`);
   const { imdbId, season, episode } = parseId(id);
   const config = getConfig(requestConfig);
+  const rdToken = config.rdToken || '';
 
-  // Fetch sources and Hebrew subtitles in parallel
-  const [sources, subtitles] = await Promise.all([
-    scrapeAll(type, id, config),
+  // Fetch torrents from indexers and Hebrew subtitles in parallel
+  const [torrents, subtitles] = await Promise.all([
+    searchIndexers(imdbId, season, episode),
     searchAll(imdbId, season, episode, config),
   ]);
 
-  if (sources.length === 0) {
+  if (torrents.length === 0) {
+    console.log(`[HebSubScout] No torrents found for ${imdbId}`);
     return { streams: [] };
   }
 
-  // Enrich each source with Hebrew subtitle match %
-  const enriched = enrichStreams(sources, subtitles);
+  console.log(`[HebSubScout] ${torrents.length} torrents, ${subtitles.length} subtitles for ${imdbId}`);
 
-  // Mark that we checked subs (so we can show ✗ for no match)
+  // Check RD instant availability if user has RD token
+  let cachedHashes = new Map();
+  if (rdToken) {
+    const hashes = torrents.map(t => t.hash);
+    cachedHashes = await checkInstantAvailability(hashes, rdToken);
+    console.log(`[HebSubScout] ${cachedHashes.size} cached on RD out of ${hashes.length}`);
+  }
+
+  // Build source objects for matching
+  const sources = torrents.map(t => ({
+    name: t.name,
+    quality: t.quality || detectQuality(t.name),
+    info: detectInfo(t.name),
+    size: t.size,
+    seeders: t.seeders,
+    tracker: t.source,
+    infoHash: t.hash,
+    isCached: cachedHashes.has(t.hash),
+  }));
+
+  // Enrich with Hebrew subtitle match %
+  const enriched = enrichStreams(sources, subtitles);
   for (const src of enriched) {
     src._subsChecked = subtitles.length > 0;
   }
 
-  // Sort: highest match % first (within same quality tier)
+  // Sort: cached first, then by quality tier, then by match %
   enriched.sort((a, b) => {
+    // Cached always first
+    if (a.isCached !== b.isCached) return a.isCached ? -1 : 1;
     const qualityOrder = { '4K': 0, '1080p': 1, '720p': 2, '480p': 3, 'SD': 4 };
     const qa = qualityOrder[a.quality] || 99;
     const qb = qualityOrder[b.quality] || 99;
@@ -151,36 +180,48 @@ builder.defineStreamHandler(async ({ type, id }) => {
     return (b.matchPct || 0) - (a.matchPct || 0);
   });
 
-  // Convert to Stremio stream objects
-  const streams = enriched.map(src => {
-    const stream = {};
+  // Resolve cached torrents through RD for direct HTTP links
+  // Resolve top 15 cached to avoid rate limits
+  const cachedSources = enriched.filter(s => s.isCached).slice(0, 15);
+  const uncachedSources = enriched.filter(s => !s.isCached);
 
-    // Source: torrent hash or direct URL
-    if (src.infoHash) {
-      stream.infoHash = src.infoHash;
-      if (src.fileIdx != null) stream.fileIdx = src.fileIdx;
-    } else if (src.url) {
-      stream.url = src.url;
-    } else {
-      return null; // Skip sources with no playable link
+  let resolvedStreams = [];
+
+  if (rdToken && cachedSources.length > 0) {
+    const resolveResults = await Promise.allSettled(
+      cachedSources.map(async (src) => {
+        const resolved = await resolveTorrent(src.infoHash, rdToken);
+        return { src, resolved };
+      })
+    );
+
+    for (const result of resolveResults) {
+      if (result.status !== 'fulfilled') continue;
+      const { src, resolved } = result.value;
+      if (resolved && resolved.url) {
+        resolvedStreams.push({
+          url: resolved.url,
+          title: buildStreamTitle({ ...src, isCached: true }),
+          name: `RD+ ${src.quality || ''}`,
+          behaviorHints: {
+            filename: resolved.filename || src.name,
+            videoSize: resolved.filesize || undefined,
+          },
+        });
+      }
     }
+  }
 
-    // Title with match % — THE KEY FEATURE
-    stream.title = buildStreamTitle(src);
+  // Also return uncached torrents as regular magnet streams (fallback)
+  const magnetStreams = uncachedSources.slice(0, 20).map(src => ({
+    infoHash: src.infoHash,
+    title: buildStreamTitle(src),
+    name: `${src.tracker || 'P2P'}\n${src.quality || ''}`,
+    behaviorHints: { filename: src.name },
+  }));
 
-    // Name (shown in compact view) — provider + quality
-    stream.name = `${src.provider}\n${src.quality || ''}`;
-
-    // Behavior hints
-    stream.behaviorHints = {};
-    if (src._original && src._original.behaviorHints) {
-      stream.behaviorHints = { ...src._original.behaviorHints };
-    }
-
-    return stream;
-  }).filter(Boolean);
-
-  console.log(`[HebSubScout] Returning ${streams.length} enriched streams for ${imdbId}`);
+  const streams = [...resolvedStreams, ...magnetStreams];
+  console.log(`[HebSubScout] Returning ${resolvedStreams.length} RD + ${magnetStreams.length} P2P streams`);
   return { streams };
 });
 
@@ -204,12 +245,12 @@ builder.defineSubtitlesHandler(async ({ type, id, extra }) => {
   let sorted = subtitles;
 
   if (videoName) {
+    console.log(`[HebSubScout] Matching subtitles against: ${videoName}`);
     const matches = matchSource(videoName, subtitles, 0);
     sorted = matches.length > 0 ? matches : subtitles;
   }
 
   // Build the base URL for proxied downloads
-  // Render auto-sets RENDER_EXTERNAL_URL, otherwise fall back to BASE_URL or localhost
   const baseUrl = process.env.RENDER_EXTERNAL_URL || process.env.BASE_URL || `http://localhost:${port}`;
 
   // Return as Stremio subtitle objects — best match first (auto-selected by Stremio)
@@ -224,10 +265,14 @@ builder.defineSubtitlesHandler(async ({ type, id, extra }) => {
 
     if (!url) return null;
 
+    // Show match % in subtitle name if we matched against a source
+    const matchLabel = sub.score ? `[${sub.score}%] ` : '';
+
     return {
       id: `hebsubscout-${sub.provider}-${sub.id}`,
       url,
       lang: 'heb',
+      SubtitleName: `${matchLabel}${sub.name} (${sub.provider})`,
     };
   }).filter(Boolean);
 

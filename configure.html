@@ -369,9 +369,7 @@
       const osKey = document.getElementById('opensubsKey').value.trim();
       const mfUrl = document.getElementById('mediafusionUrl').value.trim();
 
-      if (rdToken) {
-        config.torrentioUrl = `https://torrentio.strem.fun/sort=qualitysize|realdebrid=${rdToken}`;
-      }
+      if (rdToken) config.rdToken = rdToken;
       if (email) config.ktuvitEmail = email;
       if (plainPass) config.ktuvitPassword = await sha256(plainPass);
       if (osKey) config.opensubsApiKey = osKey;
