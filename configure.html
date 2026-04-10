@@ -240,14 +240,13 @@
     </div>
 
     <div class="card" style="border-color: var(--accent);">
-      <h2>Torrentio <span class="tag" style="color: var(--warning);">מומלץ</span></h2>
+      <h2>Real-Debrid <span class="tag" style="color: var(--warning);">מומלץ</span></h2>
       <div class="field">
-        <label>כתובת Torrentio שלך (עם Real-Debrid)</label>
-        <input type="url" id="torrentioUrl" placeholder="https://torrentio.strem.fun/realdebrid=XXXX|..." dir="ltr">
+        <label>API Token</label>
+        <input type="text" id="rdToken" placeholder="הכנס את ה-API Token שלך מ-Real-Debrid" dir="ltr">
         <div class="hint">
-          העתק את הכתובת מ-<a href="https://torrentio.strem.fun/configure" target="_blank" style="color: var(--accent); text-decoration: none;">Torrentio Configure</a> —
-          הגדר Real-Debrid שם, העתק את ה-URL שמתקבל, והדבק כאן.
-          <br>בלי זה, מקורות יהיו טורנטים רגילים בלי RD.
+          קבל את ה-Token מ-<a href="https://real-debrid.com/apitoken" target="_blank" style="color: var(--accent); text-decoration: none;">real-debrid.com/apitoken</a>
+          — בלי זה, מקורות יהיו טורנטים רגילים.
         </div>
       </div>
     </div>
@@ -341,12 +340,15 @@
 
     function buildConfig() {
       const config = {};
-      const torrentio = document.getElementById('torrentioUrl').value.trim();
+      const rdToken = document.getElementById('rdToken').value.trim();
       const email = document.getElementById('ktuvitEmail').value.trim();
       const pass = document.getElementById('ktuvitPassword').value.trim();
       const osKey = document.getElementById('opensubsKey').value.trim();
       const mfUrl = document.getElementById('mediafusionUrl').value.trim();
-      if (torrentio) config.torrentioUrl = torrentio;
+      // Build Torrentio URL with RD token + sensible defaults
+      if (rdToken) {
+        config.torrentioUrl = `https://torrentio.strem.fun/sort=qualitysize|realdebrid=${rdToken}`;
+      }
       if (email) config.ktuvitEmail = email;
       if (pass) config.ktuvitPassword = pass;
       if (osKey) config.opensubsApiKey = osKey;
